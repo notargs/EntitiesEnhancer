@@ -212,7 +212,7 @@
       }
     },
     "jp.notargs.entities-enhancer": {
-      "version": "file:EntityEnhancer",
+      "version": "file:EntitiesEnhancer",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}
