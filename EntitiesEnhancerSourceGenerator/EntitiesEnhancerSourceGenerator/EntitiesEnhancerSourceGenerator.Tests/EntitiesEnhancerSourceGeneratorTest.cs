@@ -1,10 +1,8 @@
-﻿using System.Linq;
-using EntitiesEnhancerSourceGenerator;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace EntityEnhancerSourceGenerator.Tests;
+namespace EntitiesEnhancerSourceGenerator.Tests;
 
 public class FlatQuerySourceGeneratorTest
 {
