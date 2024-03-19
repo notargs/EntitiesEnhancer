@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using FlatQueries;
+using EntitiesEnhancer;
 using Unity.Entities;
 
-namespace FlatQuerySourceGenerator.Sample;
+namespace EntitiesEnhancerSourceGenerator.Sample;
 
 public class Examples
 {

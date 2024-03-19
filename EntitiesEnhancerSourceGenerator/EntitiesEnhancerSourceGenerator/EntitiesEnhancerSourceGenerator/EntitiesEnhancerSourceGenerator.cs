@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using EntityEnhancerSourceGenerator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-
-namespace FlatQuerySourceGenerator;
+namespace EntitiesEnhancerSourceGenerator;
 
 [Generator]
 public class FlatQuerySourceGenerator : IIncrementalGenerator
@@ -19,7 +19,7 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                 """
                 using Unity.Entities;
 
-                namespace FlatQueries;
+                namespace EntitiesEnhancer;
 
                 internal record struct FlatQuery<TQueryTarget>();
 
@@ -85,9 +85,9 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                             return null;
                     }
 
-                    // FlatQueries.FlatQuery<>でなければスキップ
+                    // EntitiesEnhancer.FlatQuery<>でなければスキップ
                     if (typeInfo.Type is not INamedTypeSymbol typeSymbol) return null;
-                    if (!typeSymbol.MatchNameAndNamespace("FlatQuery", "FlatQueries")) return null;
+                    if (!typeSymbol.MatchNameAndNamespace("FlatQuery", "EntitiesEnhancer")) return null;
 
                     var hasQueryOption = typeSymbol.TypeArguments.Length > 1;
 
@@ -106,13 +106,13 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                     return new SyntaxParameter(
                         typeSymbol,
                         (INamedTypeSymbol)typeSymbol.TypeArguments[0],
-                        queryOptionTypeDictionary.TryGetValue("FlatQueries.FlatWithAll", out var withAllTypeSymbol)
+                        queryOptionTypeDictionary.TryGetValue("EntitiesEnhancer.FlatWithAll", out var withAllTypeSymbol)
                             ? (INamedTypeSymbol)withAllTypeSymbol.TypeArguments[0]
                             : null,
-                        queryOptionTypeDictionary.TryGetValue("FlatQueries.FlatWithAny", out var withAnyTypeSymbol)
+                        queryOptionTypeDictionary.TryGetValue("EntitiesEnhancer.FlatWithAny", out var withAnyTypeSymbol)
                             ? (INamedTypeSymbol)withAnyTypeSymbol.TypeArguments[0]
                             : null,
-                        queryOptionTypeDictionary.TryGetValue("FlatQueries.FlatWithNone", out var withNoneTypeSymbol)
+                        queryOptionTypeDictionary.TryGetValue("EntitiesEnhancer.FlatWithNone", out var withNoneTypeSymbol)
                             ? (INamedTypeSymbol)withNoneTypeSymbol.TypeArguments[0]
                             : null
                     );
@@ -131,7 +131,7 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                     using Unity.Collections;
                     using Unity.Entities;
 
-                    namespace FlatQueries;
+                    namespace EntitiesEnhancer;
 
                     internal static class FlatQueryExtension
                     {

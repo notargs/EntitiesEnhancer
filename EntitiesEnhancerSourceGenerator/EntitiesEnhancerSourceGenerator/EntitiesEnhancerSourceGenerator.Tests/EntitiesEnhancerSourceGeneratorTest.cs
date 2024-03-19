@@ -1,15 +1,16 @@
 ﻿using System.Linq;
+using EntitiesEnhancerSourceGenerator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace FlatQuerySourceGenerator.Tests;
+namespace EntityEnhancerSourceGenerator.Tests;
 
 public class FlatQuerySourceGeneratorTest
 {
     private const string VectorClassText = 
         """
-        using FlatQueries;
+        using EntityEnhancer;
         using Unity.Entities;
         
         namespace TestNamespace;

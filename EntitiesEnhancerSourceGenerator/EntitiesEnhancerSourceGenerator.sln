@@ -1,10 +1,10 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlatQuerySourceGenerator", "FlatQuerySourceGenerator\FlatQuerySourceGenerator\FlatQuerySourceGenerator.csproj", "{AA867EE7-C50B-4EE6-90A7-EF514D29EEC5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntitiesEnhancerSourceGenerator", "EntitiesEnhancerSourceGenerator\EntitiesEnhancerSourceGenerator\EntitiesEnhancerSourceGenerator.csproj", "{AA867EE7-C50B-4EE6-90A7-EF514D29EEC5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlatQuerySourceGenerator.Sample", "FlatQuerySourceGenerator\FlatQuerySourceGenerator.Sample\FlatQuerySourceGenerator.Sample.csproj", "{A86EB028-92FA-4964-B70D-4D19734ED9B1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntitiesEnhancerSourceGenerator.Sample", "EntitiesEnhancerSourceGenerator\EntitiesEnhancerSourceGenerator.Sample\EntitiesEnhancerSourceGenerator.Sample.csproj", "{A86EB028-92FA-4964-B70D-4D19734ED9B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlatQuerySourceGenerator.Tests", "FlatQuerySourceGenerator\FlatQuerySourceGenerator.Tests\FlatQuerySourceGenerator.Tests.csproj", "{80D18A38-CE72-46AC-A4F0-BB15C414A86E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntitiesEnhancerSourceGenerator.Tests", "EntitiesEnhancerSourceGenerator\EntitiesEnhancerSourceGenerator.Tests\EntitiesEnhancerSourceGenerator.Tests.csproj", "{80D18A38-CE72-46AC-A4F0-BB15C414A86E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

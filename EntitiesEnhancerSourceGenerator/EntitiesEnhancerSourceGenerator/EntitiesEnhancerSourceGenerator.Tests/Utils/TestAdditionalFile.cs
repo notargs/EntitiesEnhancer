@@ -2,7 +2,7 @@ using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
-namespace FlatQuerySourceGenerator.Tests.Utils;
+namespace EntitiesEnhancerSourceGenerator.Tests.Utils;
 
 public class TestAdditionalFile : AdditionalText
 {
