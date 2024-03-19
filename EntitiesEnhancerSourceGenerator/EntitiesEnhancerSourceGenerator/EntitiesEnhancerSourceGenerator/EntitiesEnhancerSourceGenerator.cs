@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using EntityEnhancerSourceGenerator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -45,40 +43,15 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
             );
         });
 
-        var anySyntaxProvider = context.SyntaxProvider.CreateSyntaxProvider((s, _) => true,
-            (generatorSyntaxContext, _) =>
-            {
-                var model = generatorSyntaxContext.SemanticModel;
-                var typeInfo = model.GetTypeInfo(generatorSyntaxContext.Node);
-                return $"{generatorSyntaxContext.Node.GetType()}: {typeInfo.Type}";
-            }).Where(x => x != null).Select((x, _) => x!);
-
-        context.RegisterSourceOutput(
-            context.CompilationProvider.Combine(anySyntaxProvider.Collect()),
-            (ctx, tuple) =>
-            {
-                var stringBuilder = new StringBuilder();
-                foreach (var typeSymbol in tuple.Right)
-                {
-                    stringBuilder.AppendLine(typeSymbol);
-                }
-
-                var test = stringBuilder.ToString();
-                Console.WriteLine("temp");
-            }
-        );
-
-        var objectCreationSyntaxProvider = context.SyntaxProvider.CreateSyntaxProvider((s, _) =>
-                {
-                    return s is ObjectCreationExpressionSyntax; // or AnonymousObjectCreationExpressionSyntax;
-                },
+        var objectCreationSyntaxProvider = context.SyntaxProvider.CreateSyntaxProvider(
+                (s, _) => s is BaseObjectCreationExpressionSyntax,
                 (generatorSyntaxContext, _) =>
                 {
                     var model = generatorSyntaxContext.SemanticModel;
                     TypeInfo typeInfo;
                     switch (generatorSyntaxContext.Node)
                     {
-                        case ObjectCreationExpressionSyntax objectCreationExpressionSyntax:
+                        case BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax:
                             typeInfo = model.GetTypeInfo(objectCreationExpressionSyntax);
                             break;
                         default:
@@ -112,7 +85,8 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                         queryOptionTypeDictionary.TryGetValue("EntitiesEnhancer.FlatWithAny", out var withAnyTypeSymbol)
                             ? (INamedTypeSymbol)withAnyTypeSymbol.TypeArguments[0]
                             : null,
-                        queryOptionTypeDictionary.TryGetValue("EntitiesEnhancer.FlatWithNone", out var withNoneTypeSymbol)
+                        queryOptionTypeDictionary.TryGetValue("EntitiesEnhancer.FlatWithNone",
+                            out var withNoneTypeSymbol)
                             ? (INamedTypeSymbol)withNoneTypeSymbol.TypeArguments[0]
                             : null
                     );
@@ -138,14 +112,9 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                     """);
 
                 var registeredTypes = new HashSet<string>();
-                foreach (var syntaxParameter in tuple.Right)
+                foreach (var syntaxParameter in tuple.Right.Where(syntaxParameter =>
+                             registeredTypes.Add(syntaxParameter.TypeSymbol.ToString())))
                 {
-                    // すでに登録済みの型はスキップ
-                    if (!registeredTypes.Add(syntaxParameter.TypeSymbol.ToString()))
-                    {
-                        continue;
-                    }
-
                     //-----------------------------------------
                     // Query without Entity
 
@@ -157,14 +126,11 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
 
                     stringBuilder.AppendLine($"          var entityQuery = {syntaxParameter.ToBuildString()};");
                     stringBuilder.AppendLine("          var entities = entityQuery.ToEntityArray(Allocator.Temp);");
-                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple())
+                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple().Where(namedTypeSymbol => namedTypeSymbol.IsStructComponentData()))
                     {
-                        if (namedTypeSymbol.IsStructComponentData())
-                        {
-                            stringBuilder.AppendLine(
-                                $"          var {namedTypeSymbol.Name.ToLower()} = entityQuery.ToComponentDataArray<{namedTypeSymbol}>(Allocator.Temp);"
-                            );
-                        }
+                        stringBuilder.AppendLine(
+                            $"          var {namedTypeSymbol.Name.ToLower()} = entityQuery.ToComponentDataArray<{namedTypeSymbol}>(Allocator.Temp);"
+                        );
                     }
 
                     // for
@@ -177,42 +143,28 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
 
                     // actionを実行
                     stringBuilder.AppendLine(
-                        $"""
-                                       action.Invoke({
-                                           string.Join(", ",
-                                               syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
-                                                   .Select(x => x.IsStructComponentData() ?
-                                                       $"new RefRW<{x.ToDisplayString()}>({x.Name.ToLower()}, i)"
-                                                       : $"entityManager.GetComponentObject<{x.ToDisplayString()}>(entities[i])"
-                                                   )
-                                           )
-                                       });
-                         """
+                        $"              action.Invoke({string.Join(", ",
+                            syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
+                                .Select(x => x.IsStructComponentData() ?
+                                    $"new RefRW<{x.ToDisplayString()}>({x.Name.ToLower()}, i)"
+                                    : $"entityManager.GetComponentObject<{x.ToDisplayString()}>(entities[i])"
+                                )
+                        )});"
                     );
 
-                    stringBuilder.AppendLine(
-                        """
-                                  }
-                        """
-                    );
+                    stringBuilder.AppendLine("          }");
 
                     // NativeArrayに情報を戻す
-                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple())
+                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
+                                 .Where(namedTypeSymbol => namedTypeSymbol.IsStructComponentData()))
                     {
-                        if (namedTypeSymbol.IsStructComponentData())
-                        {
-                            // CopyFromComponentDataArray
-                            stringBuilder.AppendLine(
-                                $"          entityQuery.CopyFromComponentDataArray({namedTypeSymbol.Name.ToLower()});"
-                            );
-                        }
+                        // CopyFromComponentDataArray
+                        stringBuilder.AppendLine(
+                            $"          entityQuery.CopyFromComponentDataArray({namedTypeSymbol.Name.ToLower()});"
+                        );
                     }
 
-                    stringBuilder.AppendLine(
-                        """
-                              }
-                        """
-                    );
+                    stringBuilder.AppendLine( "      }"  );
 
                     //-----------------------------------------
                     // Query with Entity
@@ -225,14 +177,12 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
 
                     stringBuilder.AppendLine($"          var entityQuery = {syntaxParameter.ToBuildString()};");
                     stringBuilder.AppendLine("          var entities = entityQuery.ToEntityArray(Allocator.Temp);");
-                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple())
+                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
+                                 .Where(namedTypeSymbol => namedTypeSymbol.IsStructComponentData()))
                     {
-                        if (namedTypeSymbol.IsStructComponentData())
-                        {
-                            stringBuilder.AppendLine(
-                                $"          var {namedTypeSymbol.Name.ToLower()} = entityQuery.ToComponentDataArray<{namedTypeSymbol}>(Allocator.Temp);"
-                            );
-                        }
+                        stringBuilder.AppendLine(
+                            $"          var {namedTypeSymbol.Name.ToLower()} = entityQuery.ToComponentDataArray<{namedTypeSymbol}>(Allocator.Temp);"
+                        );
                     }
 
                     // for
@@ -245,44 +195,30 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
 
                     // actionを実行
                     stringBuilder.AppendLine(
-                        $"""
-                                       action.Invoke({
-                                           string.Join(", ",
-                                               new[] { "entities[i]" }
-                                                   .Concat(syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
-                                                       .Select(x => x.IsStructComponentData() ?
-                                                           $"new RefRW<{x.ToDisplayString()}>({x.Name.ToLower()}, i)"
-                                                           : $"entityManager.GetComponentObject<{x.ToDisplayString()}>(entities[i])"
-                                                       )
-                                                   )
-                                           )
-                                       });
-                         """
+                        $"              action.Invoke({string.Join(", ",
+                            new[] { "entities[i]" }
+                                .Concat(syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
+                                    .Select(x => x.IsStructComponentData() ?
+                                        $"new RefRW<{x.ToDisplayString()}>({x.Name.ToLower()}, i)"
+                                        : $"entityManager.GetComponentObject<{x.ToDisplayString()}>(entities[i])"
+                                    )
+                                )
+                        )});"
                     );
 
-                    stringBuilder.AppendLine(
-                        """
-                                  }
-                        """
-                    );
+                    stringBuilder.AppendLine("          }");
 
                     // NativeArrayに情報を戻す
-                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple())
+                    foreach (var namedTypeSymbol in syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
+                                 .Where(namedTypeSymbol => namedTypeSymbol.IsStructComponentData()))
                     {
-                        if (namedTypeSymbol.IsStructComponentData())
-                        {
-                            // CopyFromComponentDataArray
-                            stringBuilder.AppendLine(
-                                $"          entityQuery.CopyFromComponentDataArray({namedTypeSymbol.Name.ToLower()});"
-                            );
-                        }
+                        // CopyFromComponentDataArray
+                        stringBuilder.AppendLine(
+                            $"          entityQuery.CopyFromComponentDataArray({namedTypeSymbol.Name.ToLower()});"
+                        );
                     }
 
-                    stringBuilder.AppendLine(
-                        """
-                              }
-                        """
-                    );
+                    stringBuilder.AppendLine("      }");
 
                     //-----------------------------------------
                     // GetSingleton
@@ -297,28 +233,22 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                     stringBuilder.AppendLine("          var entities = entityQuery.ToEntityArray(Allocator.Temp);");
 
                     stringBuilder.AppendLine(
-                        $"""
-                                   return {
-                                       (syntaxParameter.QueryTargetTypeSymbol.IsTupleType ? $"({
-                                           string.Join(", ",
-                                               syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
-                                                   .Select(x => x.IsStructComponentData() ?
-                                                       $"entityQuery.GetSingletonRW<{x.ToDisplayString()}>()"
-                                                       : $"entityQuery.GetSingleton<{x.ToDisplayString()}>()"
-                                                   )
-                                           )
-                                       })" : syntaxParameter.QueryTargetTypeSymbol.IsStructComponentData() ?
-                                               $"entityQuery.GetSingletonRW<{syntaxParameter.QueryTargetTypeSymbol.ToDisplayString()}>()"
-                                               : $"entityQuery.GetSingleton<{syntaxParameter.QueryTargetTypeSymbol.ToDisplayString()}>()")
-                                   };
-                         """
+                        $"          return {(syntaxParameter.QueryTargetTypeSymbol.IsTupleType ? $"({
+                            string.Join(", ",
+                                syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
+                                    .Select(x => x.IsStructComponentData() ?
+                                        $"entityQuery.GetSingletonRW<{x.ToDisplayString()}>()"
+                                        : $"entityQuery.GetSingleton<{x.ToDisplayString()}>()"
+                                    )
+                            )
+                        })" : syntaxParameter.QueryTargetTypeSymbol.IsStructComponentData() ?
+                                $"entityQuery.GetSingletonRW<{syntaxParameter.QueryTargetTypeSymbol.ToDisplayString()}>()"
+                                : $"entityQuery.GetSingleton<{syntaxParameter.QueryTargetTypeSymbol.ToDisplayString()}>()")};"
                     );
 
 
                     stringBuilder.AppendLine(
-                        """
-                              }
-                        """
+                        "      }"
                     );
                     //-----------------------------------------
                     // GetSingletonWithEntity
@@ -333,26 +263,18 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
                     stringBuilder.AppendLine("          var entities = entityQuery.ToEntityArray(Allocator.Temp);");
 
                     stringBuilder.AppendLine(
-                        $"""
-                                   return {
-                                       $"({
-                                           string.Join(", ",
-                                               new[] { "entityQuery.GetSingletonEntity()" }.Concat(syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
-                                                   .Select(x => x.IsStructComponentData() ?
-                                                       $"entityQuery.GetSingletonRW<{x.ToDisplayString()}>()"
-                                                       : $"entityQuery.GetSingleton<{x.ToDisplayString()}>()"
-                                                   ))
-                                           )
-                                       })"
-                                   };
-                         """
+                        $"          return ({string.Join(", ",
+                            new[] { "entityQuery.GetSingletonEntity()" }.Concat(syntaxParameter.QueryTargetTypeSymbol.ExpandTypeOrTuple()
+                                .Select(x => x.IsStructComponentData() ?
+                                    $"entityQuery.GetSingletonRW<{x.ToDisplayString()}>()"
+                                    : $"entityQuery.GetSingleton<{x.ToDisplayString()}>()"
+                                ))
+                        )});"
                     );
 
 
                     stringBuilder.AppendLine(
-                        """
-                              }
-                        """
+                        "      }"
                     );
                 }
 

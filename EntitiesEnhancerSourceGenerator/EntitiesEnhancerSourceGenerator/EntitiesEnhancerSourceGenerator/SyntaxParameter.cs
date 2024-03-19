@@ -1,10 +1,9 @@
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace EntityEnhancerSourceGenerator
+namespace EntitiesEnhancerSourceGenerator
 {
     internal record SyntaxParameter(
         INamedTypeSymbol TypeSymbol,
