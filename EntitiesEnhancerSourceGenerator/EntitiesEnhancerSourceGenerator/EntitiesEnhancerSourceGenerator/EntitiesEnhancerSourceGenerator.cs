@@ -44,14 +44,14 @@ public class FlatQuerySourceGenerator : IIncrementalGenerator
         });
 
         var objectCreationSyntaxProvider = context.SyntaxProvider.CreateSyntaxProvider(
-                (s, _) => s is ObjectCreationExpressionSyntax,
+                (s, _) => s is BaseObjectCreationExpressionSyntax,
                 (generatorSyntaxContext, _) =>
                 {
                     var model = generatorSyntaxContext.SemanticModel;
                     TypeInfo typeInfo;
                     switch (generatorSyntaxContext.Node)
                     {
-                        case ObjectCreationExpressionSyntax objectCreationExpressionSyntax:
+                        case BaseObjectCreationExpressionSyntax objectCreationExpressionSyntax:
                             typeInfo = model.GetTypeInfo(objectCreationExpressionSyntax);
                             break;
                         default:

@@ -15,6 +15,8 @@ public class FlatQuerySourceGeneratorTest
         
         public class Examples
         {
+            private FlatQuery<double, string> _test = new();
+        
             public void ExampleMain()
             {
                 var query = new FlatQuery<int, int>(new EntityManager());
